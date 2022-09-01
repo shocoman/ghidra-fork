@@ -320,6 +320,39 @@ class ComponentNode extends Node {
 			top = activeComp.getComponentWindowingPlaceholder();
 			pane.setSelectedComponent(activeComp);
 			pane.addChangeListener(tabbedPaneChangeListener);
+			
+			// add tab scrolling with the mouse wheel
+			pane.addMouseWheelListener(e -> {
+			        JTabbedPane tabbedPane = (JTabbedPane) e.getSource();
+
+			        if (tabbedPane.getTabCount() == 0) {
+			        	return;
+			        }
+			        
+			        // allow scrolling only if the cursor is right over the tab list (we assume it's horizontal)
+			        var tabbedPaneBounds = tabbedPane.getBounds();
+			        
+			        // take 'height' and 'y' from a tab and 'width' and 'x' from the outer JTabbedPane area  
+			        var tabAreaBounds = tabbedPane.getBoundsAt(0);
+			        tabAreaBounds.x = 0;
+			        tabAreaBounds.width = tabbedPaneBounds.width;
+			        
+			        if (!tabAreaBounds.contains(e.getPoint())) {
+			        	return;
+			        }
+
+			        // scroll tabs
+			        String scrollTabsActionKey = e.getPreciseWheelRotation() < 0 ?  
+			        		"scrollTabsBackwardAction" : "scrollTabsForwardAction"; 
+			        ActionMap map = tabbedPane.getActionMap();
+			        if (map != null) {
+			            Action action = map.get(scrollTabsActionKey);
+			            if (action != null && action.isEnabled()) {
+			                action.actionPerformed(new ActionEvent(tabbedPane, ActionEvent.ACTION_PERFORMED, null, 0, 0));
+			            }
+			        }
+			});
+			
 		}
 		invalid = false;
 		return comp;
