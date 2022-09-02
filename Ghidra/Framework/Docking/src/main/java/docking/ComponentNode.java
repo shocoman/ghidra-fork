@@ -160,7 +160,6 @@ class ComponentNode extends Node implements OptionsChangeListener {
 	}
 	
 	private void initOptions() {
-		System.out.println("INIT OPTIONS");
 		var tool = winMgr.getTool();
 		ToolOptions opt = tool.getOptions(ToolConstants.TOOL_OPTIONS);
 		opt.registerOption(OPTION_SCROLL_TABS_WITH_MOUSE_WHEEL, DEFAULT_SCROLL_TABS_WITH_MOUSE_WHEEL, null, 
@@ -172,8 +171,6 @@ class ComponentNode extends Node implements OptionsChangeListener {
 	public void optionsChanged(ToolOptions options, String opName, Object oldValue, Object newValue) {
 		if (opName.equals(OPTION_SCROLL_TABS_WITH_MOUSE_WHEEL)) {
 			if (comp != null && comp instanceof JTabbedPane) {
-				System.out.printf("Option '%s' is changed to '%s' from '%s' %n", 
-						OPTION_SCROLL_TABS_WITH_MOUSE_WHEEL, newValue, oldValue);				
 				if ((Boolean) newValue) {
 					comp.addMouseWheelListener(tabbedPaneMouseWheelListenerForTabScrolling);
 				} else {
