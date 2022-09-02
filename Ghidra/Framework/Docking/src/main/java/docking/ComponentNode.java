@@ -25,8 +25,12 @@ import javax.swing.event.ChangeListener;
 import org.jdom.Element;
 
 import docking.help.HelpService;
+import docking.tool.ToolConstants;
 import docking.widgets.OptionDialog;
 import docking.widgets.tabbedpane.DockingTabRenderer;
+
+import ghidra.framework.options.OptionsChangeListener;
+import ghidra.framework.options.ToolOptions;
 import ghidra.util.*;
 import ghidra.util.exception.AssertException;
 import utilities.util.reflection.ReflectionUtilities;
@@ -35,7 +39,11 @@ import utilities.util.reflection.ReflectionUtilities;
  * Node object for managing one or more components. If more that one managed component
  * is active, then this node will create a tabbedPane object to contain the active components.
  */
-class ComponentNode extends Node {
+class ComponentNode extends Node implements OptionsChangeListener {
+	
+	private static final String OPTION_SCROLL_TABS_WITH_MOUSE_WHEEL = "Tab Scrolling With Mouse Wheel";
+	private static final boolean DEFAULT_SCROLL_TABS_WITH_MOUSE_WHEEL = true;
+	
 
 	private ComponentPlaceholder top;
 	private List<ComponentPlaceholder> windowPlaceholders;
@@ -95,6 +103,8 @@ class ComponentNode extends Node {
 	ComponentNode(DockingWindowManager mgr) {
 		super(mgr);
 		windowPlaceholders = new ArrayList<>();
+		
+		initOptions();
 	}
 
 	/**
@@ -145,7 +155,34 @@ class ComponentNode extends Node {
 		if (topIndex >= 0 && topIndex < windowPlaceholders.size()) {
 			top = windowPlaceholders.get(topIndex);
 		}
+
+		initOptions();
 	}
+	
+	private void initOptions() {
+		System.out.println("INIT OPTIONS");
+		var tool = winMgr.getTool();
+		ToolOptions opt = tool.getOptions(ToolConstants.TOOL_OPTIONS);
+		opt.registerOption(OPTION_SCROLL_TABS_WITH_MOUSE_WHEEL, DEFAULT_SCROLL_TABS_WITH_MOUSE_WHEEL, null, 
+				"Allow scrolling of the docking tabs with the mouse wheel when the cursor is above them");
+		opt.addOptionsChangeListener(this);
+	}
+
+	@Override
+	public void optionsChanged(ToolOptions options, String opName, Object oldValue, Object newValue) {
+		if (opName.equals(OPTION_SCROLL_TABS_WITH_MOUSE_WHEEL)) {
+			if (comp != null && comp instanceof JTabbedPane) {
+				System.out.printf("Option '%s' is changed to '%s' from '%s' %n", 
+						OPTION_SCROLL_TABS_WITH_MOUSE_WHEEL, newValue, oldValue);				
+				if ((Boolean) newValue) {
+					comp.addMouseWheelListener(tabbedPaneMouseWheelListenerForTabScrolling);
+				} else {
+					comp.removeMouseWheelListener(tabbedPaneMouseWheelListenerForTabScrolling);
+				}
+			}
+		}
+	}
+	
 
 	private boolean containsPlaceholder(ComponentPlaceholder placeholder) {
 		// Note: we purposely didn't override equals here, as other code here relies on the default
@@ -351,8 +388,12 @@ class ComponentNode extends Node {
 			top = activeComp.getComponentWindowingPlaceholder();
 			pane.setSelectedComponent(activeComp);
 			pane.addChangeListener(tabbedPaneChangeListener);
-			// add tab scrolling with the mouse wheel
-			pane.addMouseWheelListener(tabbedPaneMouseWheelListenerForTabScrolling);
+
+			var allowTabScrolling = winMgr.getTool().getOptions(ToolConstants.TOOL_OPTIONS)
+					.getBoolean(OPTION_SCROLL_TABS_WITH_MOUSE_WHEEL, Boolean.TRUE);
+			if (allowTabScrolling) {
+				pane.addMouseWheelListener(tabbedPaneMouseWheelListenerForTabScrolling);
+			}
 			
 		}
 		invalid = false;
@@ -590,6 +631,7 @@ class ComponentNode extends Node {
 			top.dispose();
 		}
 		windowPlaceholders.clear();
+		winMgr.getTool().getOptions(ToolConstants.TOOL_OPTIONS).removeOptionsChangeListener(this);
 	}
 
 //==================================================================================================
