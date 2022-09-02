@@ -528,6 +528,11 @@ class GhidraScriptActionManager {
 
 		@Override
 		public boolean isEnabledForContext(ActionContext context) {
+			var lastRunScript = provider.getLastRunScript();
+			if (lastRunScript != null) {
+				setDescription("Rerun the last run script: \"%s\"".formatted(lastRunScript.getName()));
+			}
+			
 			return provider.getLastRunScript() != null;
 		}
 	}
