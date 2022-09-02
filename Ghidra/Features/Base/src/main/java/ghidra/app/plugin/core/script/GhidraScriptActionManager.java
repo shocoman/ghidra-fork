@@ -17,6 +17,8 @@ package ghidra.app.plugin.core.script;
 
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.io.*;
 import java.net.*;
 import java.nio.file.Files;
@@ -500,17 +502,22 @@ class GhidraScriptActionManager {
 
 	}
 
-	private class RerunLastScriptAction extends DockingAction {
+	private class RerunLastScriptAction extends DockingAction implements PropertyChangeListener {
 
+		private final static String ORIGINAL_DESCRIPTION = "Rerun the last run script"; 
+		
+		private String description = ORIGINAL_DESCRIPTION;
+		
 		RerunLastScriptAction(String toolbarGroup) {
 			super(RERUN_LAST_SHARED_ACTION_NAME, plugin.getName(), KeyBindingType.SHARED);
 
 			setToolBarData(
 				new ToolBarData(ResourceManager.loadImage("images/play_again.png"), toolbarGroup));
-			setDescription("Rerun the last run script");
+			setDescription(ORIGINAL_DESCRIPTION);
 			setHelpLocation(new HelpLocation(plugin.getName(), "Run_Last"));
 
 			initKeyStroke(RERUN_LAST_SCRIPT_KEYSTROKE);
+			addPropertyChangeListener(this);
 		}
 
 		private void initKeyStroke(KeyStroke keyStroke) {
@@ -525,15 +532,27 @@ class GhidraScriptActionManager {
 		public void actionPerformed(ActionContext context) {
 			provider.runLastScript();
 		}
+		
+		@Override
+		public String getDescription() {
+			return description;
+		}
 
 		@Override
 		public boolean isEnabledForContext(ActionContext context) {
-			var lastRunScript = provider.getLastRunScript();
-			if (lastRunScript != null) {
-				setDescription("Rerun the last run script: \"%s\"".formatted(lastRunScript.getName()));
-			}
-			
 			return provider.getLastRunScript() != null;
 		}
+
+		@Override
+		public void propertyChange(PropertyChangeEvent e) {		
+			if (e.getPropertyName().equals(DockingActionIf.DESCRIPTION_PROPERTY)) {
+				var lastRunScript = provider.getLastRunScript();
+				if (lastRunScript != null) {
+					description = "%s: \"%s\"".formatted(ORIGINAL_DESCRIPTION, lastRunScript.getName());
+				}
+			}
+			
+		}
+		
 	}
 }
