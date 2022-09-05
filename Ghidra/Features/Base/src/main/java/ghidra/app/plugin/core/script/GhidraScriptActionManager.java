@@ -535,6 +535,7 @@ class GhidraScriptActionManager {
 		
 		@Override
 		public String getDescription() {
+			System.out.println("getDescription");
 			return description;
 		}
 
@@ -546,6 +547,7 @@ class GhidraScriptActionManager {
 		@Override
 		public void propertyChange(PropertyChangeEvent e) {		
 			if (e.getPropertyName().equals(DockingActionIf.DESCRIPTION_PROPERTY)) {
+				System.out.println("propertyChange");
 				var lastRunScript = provider.getLastRunScript();
 				if (lastRunScript != null) {
 					description = "%s: \"%s\"".formatted(ORIGINAL_DESCRIPTION, lastRunScript.getName());
