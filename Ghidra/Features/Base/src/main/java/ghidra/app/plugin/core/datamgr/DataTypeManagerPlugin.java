@@ -514,6 +514,11 @@ public class DataTypeManagerPlugin extends ProgramPlugin
 		}
 		editorManager.edit(dt);
 	}
+	
+	@Override
+	public void selectField(DataType dt, long fieldOffset) {
+		editorManager.selectFieldWhenEditorWillBeShown(dt, fieldOffset);
+	}
 
 	@Override
 	public DataTypeManager getBuiltInDataTypesManager() {

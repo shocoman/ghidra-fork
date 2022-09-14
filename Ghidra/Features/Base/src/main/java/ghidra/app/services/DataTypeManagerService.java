@@ -100,6 +100,13 @@ public interface DataTypeManagerService extends DataTypeQueryService {
 	 *         in other words, if {@link DataType#getDataTypeManager()} returns null.
 	 */
 	public void edit(DataType dt);
+	
+	/**
+	 * Select the specified struct/union field or enum entry in the opened editor for the type. 
+	 * @param dt Structure, Union, or Enum data type
+	 * @param fieldOffset a byte offset of a struct or unity field, or just a value of an Enum entry  
+	 */
+	public default void selectField(DataType dt, long fieldOffset) {}
 
 	/**
 	 * Closes the archive for the given {@link DataTypeManager}.  This will ignore request to 

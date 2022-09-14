@@ -77,6 +77,11 @@ public class EditDataTypeAction extends AbstractDecompilerAction {
 		final DataTypeManagerService service =
 			context.getTool().getService(DataTypeManagerService.class);
 		service.edit(baseDataType);
+		
+		long fieldByteOffset = DecompilerUtils.getFieldOffset(context);
+		if (fieldByteOffset >= 0) {
+			service.selectField(baseDataType, fieldByteOffset);
+		}
 	}
 
 }

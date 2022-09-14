@@ -15,8 +15,12 @@
  */
 package ghidra.app.plugin.core.datamgr.editor;
 
+import java.awt.Rectangle;
+import java.awt.event.HierarchyEvent;
+import java.awt.event.HierarchyListener;
 import java.util.ArrayList;
 import java.util.List;
+import javax.swing.JTable;
 
 import docking.ComponentProvider;
 import docking.actions.DockingToolActions;
@@ -133,6 +137,88 @@ public class DataTypeEditorManager
 		editor.addEditorListener(this);
 		editorList.add(editor);
 	}
+	
+		
+	public void selectFieldWhenEditorWillBeShown(DataType dt, long fieldOffset) {
+		var editorProvider = getEditor(dt);
+		if (editorProvider == null || fieldOffset < 0) {
+			return;
+		}
+		
+		var comp = editorProvider.getComponentProvider().getComponent();
+		if (comp.isShowing()) {
+			selectField(editorProvider, dt, fieldOffset);
+		} else {
+			// before messing with the table, wait until its parent editor has been shown on the screen and has valid dimensions
+			comp.addHierarchyListener(new HierarchyListener() {
+				@Override
+				public void hierarchyChanged(HierarchyEvent e) {
+					if (HierarchyEvent.SHOWING_CHANGED == e.getChangeFlags()) {
+						if (e.getComponent().isShowing()) {
+							selectField(editorProvider, dt, fieldOffset);
+						} 
+						comp.removeHierarchyListener(this);
+					}
+				}
+			});
+		}
+	}
+	
+	private void selectField(EditorProvider editorProvider, DataType dt, long fieldOffset) {
+		JTable table;
+		int fieldRow;
+		
+		if (dt instanceof Structure) {
+			table = ((CompositeEditorProvider) editorProvider).getTable();
+			var comp = ((Structure) dt).getDefinedComponentAtOrAfterOffset((int)fieldOffset);
+			if (comp == null) {
+				return;
+			} 
+			fieldRow = comp.getOrdinal();								
+		} else if (dt instanceof Union) {
+			table = ((CompositeEditorProvider) editorProvider).getTable();
+			fieldRow = 0;
+			for (var comp : ((Union) dt).getComponents()) {
+				if (comp.getOffset() == fieldOffset) {
+					break;
+				}
+				fieldRow += 1;
+			}
+		} 
+		else if (dt instanceof Enum) {
+			var enumEditorProvider = (EnumEditorProvider) editorProvider;
+			var editorPanel = (EnumEditorPanel) enumEditorProvider.getComponent();
+			table = editorPanel.getTable();
+
+			var enumFieldName = ((Enum) dt).getName(fieldOffset);
+		    for (fieldRow = 0; fieldRow < table.getRowCount(); fieldRow++) {
+	            if (enumFieldName.equals(table.getModel().getValueAt(fieldRow, EnumTableModel.NAME_COL))) {
+	                break;
+	            }
+		    }
+		} else {
+			return;
+		}
+				
+		var fieldRect = new Rectangle(table.getCellRect(fieldRow, 0, false));
+		var visibleRect = table.getVisibleRect();
+
+		boolean isFieldVisible = visibleRect.y <= fieldRect.y && fieldRect.y < visibleRect.y + visibleRect.height;
+		if (!isFieldVisible) {
+			// scroll so that the required row would appear in the center of the view when possible
+			var viewCenterY = visibleRect.y + visibleRect.height/2;
+			var dummyFieldRect = (Rectangle) fieldRect.clone();
+			if (viewCenterY < fieldRect.y)
+				dummyFieldRect.y += visibleRect.height/2 - fieldRect.height/2;
+			else 
+				dummyFieldRect.y -= visibleRect.height/2 - fieldRect.height/2;
+			
+			table.scrollRectToVisible(dummyFieldRect);
+		}
+		// it seems the next line already performs scrolling albeit without centering the view
+		table.getSelectionModel().setSelectionInterval(fieldRow, fieldRow);
+	}
+	
 
 	private void installEditorActions() {
 

@@ -23,6 +23,7 @@ import ghidra.app.decompiler.*;
 import ghidra.app.plugin.core.decompile.DecompilerActionContext;
 import ghidra.program.model.address.*;
 import ghidra.program.model.data.DataType;
+import ghidra.program.model.data.Enum;
 import ghidra.program.model.listing.Function;
 import ghidra.program.model.listing.Program;
 import ghidra.program.model.pcode.*;
@@ -863,5 +864,32 @@ public class DecompilerUtils {
 		}
 
 		return null;
+	}
+	
+	/**
+	 * Returns the field offset or the enum entry value for the given context 
+	 * if the selected token represents a struct/union field or enum entry
+	 *  
+	 * @param context the context
+	 * @return the byte offset or -1 when the selected type is not a struct, union, or enum
+	 */
+	public static long getFieldOffset(DecompilerActionContext context) {
+		DecompilerPanel decompilerPanel = context.getDecompilerPanel();
+
+		ClangToken token = decompilerPanel.getSelectedToken();
+		if (token == null) {
+			token = context.getTokenAtCursor();
+		}
+		
+		if (token instanceof ClangFieldToken) {
+			return ((ClangFieldToken) token).getOffset();
+		}
+		 
+		var dt = getDataType(token);
+		if (dt instanceof Enum) {
+			return ((Enum)dt).getValue(token.getText());
+		} else {
+			return -1;
+		}
 	}
 }
