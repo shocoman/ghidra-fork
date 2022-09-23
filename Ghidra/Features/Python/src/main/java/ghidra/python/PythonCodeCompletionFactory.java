@@ -25,6 +25,7 @@ import org.python.core.PyInstance;
 import org.python.core.PyObject;
 
 import docking.widgets.label.GDLabel;
+import docking.widgets.label.GHtmlLabel;
 import ghidra.app.plugin.core.console.CodeCompletion;
 import ghidra.framework.options.Options;
 import ghidra.util.Msg;
@@ -214,6 +215,61 @@ public class PythonCodeCompletionFactory {
 			}
 		}
 		return new CodeCompletion(description, insertion, comp);
+	}
+	
+	/**
+	 * Creates a new CodeCompletion from the given Python objects 
+	 * and adds highlighting to the code completion window for already entered part of the insertion string.  
+	 * 
+	 * @param insertion what will be inserted to make the code complete
+	 * @param pyObj a Python Object
+	 * @param userInput a word that we want to autocomplete
+	 * @return A new CodeCompletion from the given Python objects.
+	 */
+	public static CodeCompletion newCodeCompletionWithHighlighting(String insertion, PyObject pyObj, String userInput) {
+		JComponent comp = null;
+		String description = insertion;
+		int charsToRemove = userInput.length();
+
+		if (pyObj != null) {
+			if (includeTypes) {
+				/* append the class name to the end of the description */
+				String className = getSimpleName(pyObj.getClass());
+				if (pyObj instanceof PyInstance) {
+					/* get the real class */
+					className = getSimpleName(((PyInstance) pyObj).instclass.__name__);
+				}
+				else if (className.startsWith("Py")) {
+					/* strip off the "Py" */
+					className = className.substring("Py".length());
+				}
+				description = description + " (" + className + ")";
+			}
+
+			// highlight matched part of the insertion string with HTML
+			// this restriction is for performance purposes, as JLabels with html are too slow to create
+			if (charsToRemove >= 2) {
+				int highlightStart = description.toLowerCase().indexOf(userInput.toLowerCase());
+				int highlightEnd = highlightStart + userInput.length(); 
+				description = String.format("<html>%s<b>%s</b>%s ; %d; %d</html>", 
+						description.substring(0, highlightStart), 
+						description.substring(highlightStart, highlightEnd),
+						description.substring(highlightEnd), 
+						highlightStart, highlightEnd);
+			}  
+			
+//			comp = new GDHtmlLabel("%s;%s;%s".formatted(description, insertion, charsToRemove));
+			comp = new GHtmlLabel(description);
+			Iterator<Class<?>> iter = classes.iterator();
+			while (iter.hasNext()) {
+				Class<?> testClass = iter.next();
+				if (testClass.isInstance(pyObj)) {
+					comp.setForeground(classToColorMap.get(testClass));
+					break;
+				}
+			}
+		}
+		return new CodeCompletion(description, insertion, comp, charsToRemove);
 	}
 
 	/**

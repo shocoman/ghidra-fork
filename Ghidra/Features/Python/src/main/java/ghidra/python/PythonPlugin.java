@@ -263,6 +263,11 @@ public class PythonPlugin extends ProgramPlugin
 	 */
 	@Override
 	public List<CodeCompletion> getCompletions(String cmd) {
+		return getCompletions(cmd, cmd.length());
+	}
+	
+	@Override
+	public List<CodeCompletion> getCompletions(String cmd, int caretOffset) {
 		// Refresh the environment
 		interactiveScript.setSourceFile(new ResourceFile(new File("python")));
 		interactiveScript.set(
@@ -270,7 +275,7 @@ public class PythonPlugin extends ProgramPlugin
 				currentSelection, currentHighlight),
 			interactiveTaskMonitor, console.getOutWriter());
 
-		return interpreter.getCommandCompletions(cmd, includeBuiltins);
+		return interpreter.getCommandCompletions(cmd, includeBuiltins, caretOffset);
 	}
 
 	@Override

@@ -46,5 +46,7 @@ public interface InterpreterConnection {
 	 * @param cmd The command to get code completions for
 	 * @return A {@link List} of {@link CodeCompletion code completions} for the given command
 	 */
+	@Deprecated
 	public List<CodeCompletion> getCompletions(String cmd);
+	public List<CodeCompletion> getCompletions(String cmd, int caretPosition);
 }

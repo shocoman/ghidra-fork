@@ -45,6 +45,8 @@ def getAutoCompleteList(command='', locals=None, includeMagic=1,
         jump_past_period = 1
     else:
         jump_past_period = 0
+        
+    print("Command: %s; Root: %s; Filter: %s" %(command, root, filter))
 
     #println("root='" + root + "'")
     #println("filter='" + filter + "'")
@@ -66,23 +68,41 @@ def getAutoCompleteList(command='', locals=None, includeMagic=1,
                                            includeSingle, includeDouble)
     completion_list = []
     for attribute in attributes:
-        if attribute.lower().startswith(filter.lower()):
+        # if attribute.lower().startswith(filter.lower()):
+        if filter.lower() in attribute.lower():
             try:
                 if object is not None:
                     pyObj = getattr(object, attribute)
                 else:
                     pyObj = locals[attribute]
                 completion_list.append(PythonCodeCompletionFactory.
-                                       newCodeCompletion(attribute,
-                                                         attribute[len(filter):],
-                                                         pyObj))
+                                       # newCodeCompletion(attribute, attribute,
+                                       newCodeCompletionWithHighlighting(attribute, pyObj, filter))
             except:
                 # hmm, problem evaluating?  Examples of this include
                 # inner classes, e.g. access$0, which aren't valid Python
                 # anyway
                 pass
-    completion_list.sort(compare_completions)
+            
+    completion_list.sort(get_lexicographical_string_comparator_where_prefix_goes_first(filter))
+    # completion_list.sort(compare_completions)
     return completion_list
+
+def get_lexicographical_string_comparator_where_prefix_goes_first(prefix):
+    """Returns a simple lexicographical string comparator with one small addition: 
+    strings that start with 'prefix' will be placed before those which don't"""
+    def comparator(a, b):
+        a_is_prefixed = a.description.startswith(prefix)
+        b_is_prefixed = b.description.startswith(prefix)
+        if a_is_prefixed and b_is_prefixed:
+            return cmp(a.description, b.description)
+        elif a_is_prefixed:
+            return -1
+        elif b_is_prefixed:
+            return 1
+        else:
+            return cmp(a.description, b.description)
+    return comparator
 
 def compare_completions(comp1, comp2):
     return cmp(comp1.description, comp2.description)

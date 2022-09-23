@@ -79,6 +79,10 @@ public class InterpreterPanel extends JPanel implements OptionsChangeListener {
 
 	private boolean caretGuard = true;
 	private PluginTool tool;
+	
+	// to correctly insert an autocompletion, we have to know the position of the caret 
+	// when the completion window was last triggered, because the user could move it away since then
+	private int caretPosOnLastCompletionListUpdate;
 
 	private static Font getBasicFont() {
 		return new Font(Font.MONOSPACED, Font.PLAIN, 20);
@@ -183,6 +187,7 @@ public class InterpreterPanel extends JPanel implements OptionsChangeListener {
 					throws BadLocationException {
 				String text = extractAndExecuteCommands(fb, offset, 0, string);
 				super.replace(fb, 0, offset, text, attr);
+				System.out.println("before updateCompletionList: insertString");
 				updateCompletionList();
 			}
 
@@ -191,6 +196,7 @@ public class InterpreterPanel extends JPanel implements OptionsChangeListener {
 					AttributeSet attrs) throws BadLocationException {
 				String txt = extractAndExecuteCommands(fb, offset, length, text);
 				super.replace(fb, 0, offset + length, txt, attrs);
+				System.out.println("before updateCompletionList: replace");
 				updateCompletionList();
 			}
 
@@ -198,20 +204,44 @@ public class InterpreterPanel extends JPanel implements OptionsChangeListener {
 			public void remove(FilterBypass fb, int offset, int length)
 					throws BadLocationException {
 				super.remove(fb, offset, length);
+				System.out.println("before updateCompletionList: remove");
 				updateCompletionList();
 			}
 		});
 
 		outputTextPane.addKeyListener(new KeyListener() {
 			private void handleEvent(KeyEvent e) {
-
 				// Ignore the copy event, as the output text pane knows how to copy its text
 				KeyStroke copyKeyStroke =
 					KeyStroke.getKeyStroke(KeyEvent.VK_C, DockingUtils.CONTROL_KEY_MODIFIER_MASK);
 				if (copyKeyStroke.equals(KeyStroke.getKeyStrokeForEvent(e))) {
 					return;
 				}
+				
+				var k = e.getKeyCode();
 
+				// if the user isn't going to press the copy shortcut in the future, 
+				// shift the focus to the input panel to correctly display the text selection highlighting
+//				var isOnlyModifyingKey = k == KeyEvent.VK_SHIFT 
+//						|| k == KeyEvent.VK_CONTROL 
+//						|| k == KeyEvent.VK_ALT 
+//						|| k == KeyEvent.VK_META 
+//						|| k == KeyEvent.VK_ALT_GRAPH;
+
+				
+				System.out.println("KeyCode: %s; Modifier: %s; %s".formatted(e.getKeyCode(), 
+						e.getModifiersEx(), KeyStroke.getKeyStrokeForEvent(e).toString()));
+				
+				boolean isJustModifyingKey = switch(e.getKeyCode()) {
+					case KeyEvent.VK_SHIFT, KeyEvent.VK_CONTROL, KeyEvent.VK_ALT, 
+						 KeyEvent.VK_META, KeyEvent.VK_ALT_GRAPH -> true;
+					default -> false;
+				};
+
+				if (!isJustModifyingKey) {
+					inputTextPane.requestFocusInWindow();
+				}
+				
 				// Send everything else down to the inputTextPane.
 				KeyBindingUtils.retargetEvent(inputTextPane, e);
 			}
@@ -283,7 +313,6 @@ public class InterpreterPanel extends JPanel implements OptionsChangeListener {
 						e.consume();
 						break;
 					default:
-
 						// Check for the completion window trigger on input that contains text
 						if (completionWindowTrigger.isTrigger(e) &&
 							!inputTextPane.getText().trim().isEmpty()) {
@@ -292,7 +321,8 @@ public class InterpreterPanel extends JPanel implements OptionsChangeListener {
 							break;
 						}
 
-						updateCompletionList();
+//						System.out.println("before updateCompletionList: inputTextPane key listener");
+//						updateCompletionList();
 						// and let the key go through to the text input field
 				}
 			}
@@ -363,6 +393,7 @@ public class InterpreterPanel extends JPanel implements OptionsChangeListener {
 		}
 		else {
 			completionWindow.setVisible(true);
+			System.out.println("before updateCompletionList: completionWindowTriggered");
 			updateCompletionList();
 		}
 	}
@@ -481,10 +512,16 @@ public class InterpreterPanel extends JPanel implements OptionsChangeListener {
 			if (!completionWindow.isVisible()) {
 				return;
 			}
-
+			
+			System.out.println("updateCompletionList");
 			String text = getInputTextPaneText();
+			
+			System.out.println("Get caret position: %s".formatted(inputTextPane.getCaretPosition()));
+			
+			caretPosOnLastCompletionListUpdate = inputTextPane.getCaretPosition();
+			
 			List<CodeCompletion> completions =
-				InterpreterPanel.this.interpreter.getCompletions(text);
+				InterpreterPanel.this.interpreter.getCompletions(text, inputTextPane.getCaretPosition());
 			completionWindow.updateCompletionList(completions);
 		});
 	}
@@ -618,22 +655,38 @@ public class InterpreterPanel extends JPanel implements OptionsChangeListener {
 		if (!CodeCompletion.isValid(completion)) {
 			return;
 		}
-
+		
 		String text = getInputTextPaneText();
-		int position = inputTextPane.getCaretPosition();
+//		int position = inputTextPane.getCaretPosition();
+		int position = caretPosOnLastCompletionListUpdate;
 		String insertion = completion.getInsertion();
-
+		
 		/* insert completion string */
-		setInputTextPaneText(text.substring(0, position) + insertion + text.substring(position));
+//		setInputTextPaneText(text.substring(0, position) + insertion + text.substring(position));
+		int insertedTextStart = position - completion.getCharsToRemove();
+		int insertedTextEnd = insertedTextStart + insertion.length();
+		System.out.println("insertedTextStart: %s; insertedTextEnd: %s; highlightCompletion?: %b"
+				.formatted(insertedTextStart, insertedTextEnd, highlightCompletion));		
+		var inputText = text.substring(0, insertedTextStart) + insertion + text.substring(position);
+		System.out.println("InputText: %s; Insert: %s".formatted(inputText, insertion));		
+		setInputTextPaneText(inputText);
 
+		
 		/* Select what we inserted so that the user can easily
 		 * get rid of what they did (in case of a mistake). */
-		if (highlightCompletion) {
-			inputTextPane.setSelectionStart(position);
+		if (highlightCompletion) 
+		{
+//			inputTextPane.setSelectionStart(position);
+			inputTextPane.setSelectionStart(insertedTextStart);
+			inputTextPane.moveCaretPosition(insertedTextEnd);
+		} else {
+			/* Then put the caret right after what we inserted. */
+//			inputTextPane.moveCaretPosition(position + insertion.length());
+//			inputTextPane.moveCaretPosition(insertedTextEnd);
+			inputTextPane.setCaretPosition(insertedTextEnd);
 		}
-
-		/* Then put the caret right after what we inserted. */
-		inputTextPane.moveCaretPosition(position + insertion.length());
+		
+		System.out.println("before updateCompletionList: insertCompletion");
 		updateCompletionList();
 	}
 

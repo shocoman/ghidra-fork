@@ -20,6 +20,8 @@ import java.io.IOException;
 import java.lang.reflect.*;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 
 import org.python.core.*;
@@ -445,11 +447,11 @@ public class GhidraPythonInterpreter extends InteractiveInterpreter {
 	 * @return A list of possible command completions.  Could be empty if there aren't any.
 	 * @see PythonPlugin#getCompletions
 	 */
-	List<CodeCompletion> getCommandCompletions(String cmd, boolean includeBuiltins) {
+	List<CodeCompletion> getCommandCompletions(String cmd, boolean includeBuiltins, int caretPosition) {
 		if ((cmd.length() > 0) && (cmd.charAt(cmd.length() - 1) == '(')) {
 			return getMethodCommandCompletions(cmd);
 		}
-		return getPropertyCommandCompletions(cmd, includeBuiltins);
+		return getPropertyCommandCompletions(cmd, includeBuiltins, caretPosition);
 	}
 
 	/**
@@ -492,16 +494,46 @@ public class GhidraPythonInterpreter extends InteractiveInterpreter {
 	 * @return A list of possible command completions.  Could be empty if there aren't any.
 	 */
 	private List<CodeCompletion> getPropertyCommandCompletions(String cmd,
-			boolean includeBuiltins) {
+			boolean includeBuiltins, int caretPosition) {
 		try {
+			
 			PyObject getAutoCompleteList = introspectModule.__findattr__("getAutoCompleteList");
+			
+			//
+			// remove ending garbage after caret; we will deal with the rest at the python's part
+			System.out.println("String before: '%s'; Length: %d; CaretPos: %d".formatted(cmd, cmd.length(), caretPosition));
+			if (0 < caretPosition && caretPosition < cmd.length()) {
+				// find first whitespace char
+				int i = caretPosition;
+				
+				while (i < cmd.length()) {
+					Character ch = cmd.charAt(i);
+					System.out.println("Char: %c".formatted(ch));
+					if (!Character.isJavaIdentifierStart(ch)) break;
+					i++;
+				}
+				cmd = cmd.substring(0, i);
+			}
+			System.out.println("String after: '%s'".formatted(cmd));
+			
+			
+			
 			PyString command = new PyString(cmd);
+			
 			PyStringMap locals = ((PyStringMap) getLocals()).copy();
 			if (includeBuiltins) {
 				// Add in the __builtin__ module's contents for the search
 				locals.update(builtinModule.__dict__);
 			}
+			
+			Instant start = Instant.now();
+			
 			List<?> list = (List<?>) getAutoCompleteList.__call__(command, locals);
+			
+			Instant end = Instant.now();
+			System.out.println(Duration.between(start, end));
+
+			
 			return CollectionUtils.asList(list, CodeCompletion.class);
 		}
 		catch (Exception e) {

@@ -140,7 +140,10 @@ public class CodeCompletionWindow extends JDialog {
 		completion_list = list;
 		jlist.setModel(new CodeCompletionListModel(list));
 		jlist.setSelectionModel(new CodeCompletionListSelectionModel(list));
-		jlist.clearSelection();
+//		jlist.clearSelection();
+		if (completion_list != null) {
+			jlist.setSelectedIndex(0);
+		}
 
 		/* size the window */
 		pack();
@@ -271,7 +274,12 @@ public class CodeCompletionWindow extends JDialog {
 	 *
 	 */
 	public void selectPrevious() {
-		for (int i = jlist.getSelectedIndex() - 1; i >= 0; i--) {
+		
+		var completionSize = completion_list.size();
+		var currentIndex = jlist.getSelectedIndex();
+
+		for (int j = 1; j <= completionSize; j++) {
+			var i = Math.floorMod(currentIndex - j, completionSize);
 			CodeCompletion completion = completion_list.get(i);
 			if (CodeCompletion.isValid(completion)) {
 				jlist.setSelectedIndex(i);
@@ -279,6 +287,15 @@ public class CodeCompletionWindow extends JDialog {
 				break;
 			}
 		}
+		
+//		for (int i = jlist.getSelectedIndex() - 1; i >= 0; i--) {
+//			CodeCompletion completion = completion_list.get(i);
+//			if (CodeCompletion.isValid(completion)) {
+//				jlist.setSelectedIndex(i);
+//				jlist.ensureIndexIsVisible(i);
+//				break;
+//			}
+//		}
 	}
 
 	/**
@@ -290,7 +307,14 @@ public class CodeCompletionWindow extends JDialog {
 		if (null == completion_list) {
 			return;
 		}
-		for (int i = jlist.getSelectedIndex() + 1; i < completion_list.size(); i++) {
+		
+		
+		var completionSize = completion_list.size();
+		var currentIndex = jlist.getSelectedIndex();
+		
+		for (int j = 1; j <= completionSize; j++) {
+			var i = Math.floorMod(currentIndex + j, completion_list.size());
+			
 			CodeCompletion completion = completion_list.get(i);
 			if (CodeCompletion.isValid(completion)) {
 				jlist.setSelectedIndex(i);
@@ -298,6 +322,15 @@ public class CodeCompletionWindow extends JDialog {
 				break;
 			}
 		}
+		
+//		for (int i = jlist.getSelectedIndex() + 1; i < completion_list.size(); i++) {
+//			CodeCompletion completion = completion_list.get(i);
+//			if (CodeCompletion.isValid(completion)) {
+//				jlist.setSelectedIndex(i);
+//				jlist.ensureIndexIsVisible(i);
+//				break;
+//			}
+//		}
 	}
 
 	/**

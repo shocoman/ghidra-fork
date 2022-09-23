@@ -35,6 +35,7 @@ public class CodeCompletion implements Comparable<CodeCompletion> {
 	private String description;
 	private String insertion;
 	private JComponent component;
+	private int charsToRemove;
 
 	
 	/**
@@ -60,6 +61,23 @@ public class CodeCompletion implements Comparable<CodeCompletion> {
 		this.description = description;
 		this.insertion = insertion;
 		this.component = comp;
+		this.charsToRemove = 0;
+	}
+	
+	/**
+	 * Construct a new CodeCompletion that can also remove text before the caret.
+	 * 
+	 * @param description description of this completion
+	 * @param insertion what will be inserted (or null)
+	 * @param comp (optional) Component to appear in completion List (or null)
+	 * @param charsToRemove the number of characters that should be removed before the insertion
+	 */
+	public CodeCompletion(String description, String insertion,
+			JComponent comp, int charsToRemove) {
+		this.description = description;
+		this.insertion = insertion;
+		this.component = comp;
+		this.charsToRemove = charsToRemove;
 	}
 
 	
@@ -92,6 +110,15 @@ public class CodeCompletion implements Comparable<CodeCompletion> {
 	 */
 	public String getInsertion() {
 		return insertion;
+	}
+	
+	/**
+	 * Returns the number of characters to remove before the insertion of the code completion
+	 * 
+	 * @return the number of characters to remove
+	 */
+	public int getCharsToRemove() {
+		return charsToRemove;
 	}
 	
 	
