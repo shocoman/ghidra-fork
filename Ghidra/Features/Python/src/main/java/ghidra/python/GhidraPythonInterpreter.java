@@ -23,10 +23,12 @@ import java.net.Socket;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
+import java.util.regex.Pattern;
 
 import org.python.core.*;
 import org.python.util.InteractiveInterpreter;
 
+import docking.widgets.label.GHtmlLabel;
 import generic.jar.ResourceFile;
 import ghidra.app.plugin.core.console.CodeCompletion;
 import ghidra.app.script.GhidraScriptUtil;
@@ -447,10 +449,33 @@ public class GhidraPythonInterpreter extends InteractiveInterpreter {
 	 * @return A list of possible command completions.  Could be empty if there aren't any.
 	 * @see PythonPlugin#getCompletions
 	 */
-	List<CodeCompletion> getCommandCompletions(String cmd, boolean includeBuiltins, int caretPosition) {
-		if ((cmd.length() > 0) && (cmd.charAt(cmd.length() - 1) == '(')) {
+	List<CodeCompletion> getCommandCompletions(String cmd, boolean includeBuiltins, int caretPosition) {	
+//		if ((cmd.length() > 0) && (cmd.charAt(cmd.length() - 1) == '(')) {
+//			return getMethodCommandCompletions(cmd);
+//		}
+		if (caretPosition > 0 && caretPosition-1 < cmd.length() && cmd.charAt(caretPosition-1) == '(') {
+			cmd = cmd.substring(0, caretPosition);
 			return getMethodCommandCompletions(cmd);
 		}
+		
+		// here we assume that the caret is located at a word that we want to autocomplete
+		// to simplify completion procedure we strip off right part of the input after the word as it has no further use
+		// the rest will be dealt with later by the python's code
+		
+		System.out.println("String before: '%s'; Length: %d; CaretPos: %d".formatted(cmd, cmd.length(), caretPosition));
+		if (0 < caretPosition && caretPosition < cmd.length()) {
+			// find first whitespace char
+			
+			// find the end of the current python token under the caret
+			int i = caretPosition;
+			while (i < cmd.length() && Character.isJavaIdentifierStart(cmd.charAt(i))) {
+				i++;
+			}
+			cmd = cmd.substring(0, i);
+		}
+		System.out.println("String after: '%s'".formatted(cmd));
+		
+		
 		return getPropertyCommandCompletions(cmd, includeBuiltins, caretPosition);
 	}
 
@@ -475,6 +500,24 @@ public class GhidraPythonInterpreter extends InteractiveInterpreter {
 				if (!completion_portion.equals("")) {
 					String[] substrings = completion_portion.split("\n");
 					for (String substring : substrings) {
+//					for (String signature : substrings) {
+						
+//						var signatureHighlightPattern = Pattern.compile("(\\w+)([ ,\\(\\)]|$)");
+//						signature = signatureHighlightPattern.matcher(signature + " ")
+//								.replaceAll("<b>$1</b>$2")
+//								.replace(",", ", ");
+//						
+//						int exceptionOffset = signature.indexOf(") ");
+//						if (exceptionOffset >= 0) {
+//							signature = String.format("%s<div style='text-align: right;'>%s</div>", 
+//									signature.substring(0, exceptionOffset+1), 
+//									signature.substring(exceptionOffset+1));
+//						}
+//						
+//						var comp = new GHtmlLabel("<html>" + signature + "</html>");
+//						
+//						completion_list.add(new CodeCompletion(signature, null, comp));
+						
 						completion_list.add(new CodeCompletion(substring, null, null));
 					}
 				}
@@ -498,24 +541,6 @@ public class GhidraPythonInterpreter extends InteractiveInterpreter {
 		try {
 			
 			PyObject getAutoCompleteList = introspectModule.__findattr__("getAutoCompleteList");
-			
-			//
-			// remove ending garbage after caret; we will deal with the rest at the python's part
-			System.out.println("String before: '%s'; Length: %d; CaretPos: %d".formatted(cmd, cmd.length(), caretPosition));
-			if (0 < caretPosition && caretPosition < cmd.length()) {
-				// find first whitespace char
-				int i = caretPosition;
-				
-				while (i < cmd.length()) {
-					Character ch = cmd.charAt(i);
-					System.out.println("Char: %c".formatted(ch));
-					if (!Character.isJavaIdentifierStart(ch)) break;
-					i++;
-				}
-				cmd = cmd.substring(0, i);
-			}
-			System.out.println("String after: '%s'".formatted(cmd));
-			
 			
 			
 			PyString command = new PyString(cmd);

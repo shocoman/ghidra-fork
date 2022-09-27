@@ -50,6 +50,7 @@ class _Helper:
         else:
             # PythonPlugin scenario
             self.msg = "Press 'F1' for usage instructions"
+        self.text = ""
 
     def __call__(self, param=None):
 
@@ -149,6 +150,7 @@ class _Helper:
                 ret = "  @return %s: %s\n" % (method["return"]["type_long"], method["return"]["comment"])
             return sig + desc + args + ret + throws
 
+        self.text = ""
         class_name, method_name = get_class_and_method(param)
         if class_name is None:
             self.orig_help(param)
@@ -159,6 +161,7 @@ class _Helper:
                 print "Searching API for " + class_name + ("" if method_name is None else "." + method_name + "()") + "..."
                 jsondoc = get_jsondoc(class_name)
                 if jsondoc is None:
+                    self.text += "No API found for " + class_name
                     print "No API found for " + class_name
                 elif method_name is None:
                     print "#####################################################"
@@ -170,6 +173,16 @@ class _Helper:
                     for method in jsondoc["methods"]:
                         print format_method(method)
                         print "-----------------------------------------------------"
+                        
+                    self.text += "#####################################################\n"
+                    self.text += format_class(jsondoc) + "\n"
+                    self.text += "#####################################################\n"
+                    for field in jsondoc["fields"]:
+                        self.text += format_field(field)
+                        self.text += "-----------------------------------------------------\n"
+                    for method in jsondoc["methods"]:
+                        self.text += format_method(method) + "\n"
+                        self.text += "-----------------------------------------------------\n"
                 else:
                     found_method = False
                     for method in jsondoc["methods"]:
@@ -177,6 +190,11 @@ class _Helper:
                             print "-----------------------------------------------------"
                             print format_method(method)
                             print "-----------------------------------------------------"
+                            
+                            self.text += "-----------------------------------------------------\n"
+                            self.text += format_method(method) + "\n"
+                            self.text += "-----------------------------------------------------\n"
+                            
                             found_method = True
                     if not found_method:
                         # The method may be inherited, so check for a super class and try again

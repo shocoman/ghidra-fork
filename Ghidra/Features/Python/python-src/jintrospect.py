@@ -59,6 +59,8 @@ def getCallTipJava(command='', locals=None):
     (root, filter) = getRootAndFilter(command, terminator='(')
     #java.lang.System.out.println("root=" + root)
     
+
+    
     try:
         if locals is not None:
             object = eval(root, locals)
@@ -166,7 +168,14 @@ def getCallTipJava(command='', locals=None):
                 for args in object.argslist:
                     if args is not None:
                         # for now
-                        tipList.append(str(args.data))
+                        print("BEFORE CRASH")
+                        # tipList.append(str(args.data))
+                        tipList.append(str(args.method))
+                        # tipList.append("T: %s" % args)
+                        print(args)
+                        print(dir(args))
+                        print(type(args))
+                        print("AFTER CRASH")
 #            elif callable(object):
 #                argspec = str(object.__call__)
 #                # these don't seem to be very accurate
@@ -200,7 +209,15 @@ def getCallTipJava(command='', locals=None):
                     signature.replace("$1exposed_", ".").replace(".__call__", "")
                     tipList.append(signature)
         
-        calltip = (name, argspec, string.join(tipList, "\n"))
+        print("Comamnd: ", command, root, filter, object)
+        
+        
+        help(object)
+        
+        print( help.text )
+        
+        calltip = (name, argspec, help.text)
+        # calltip = (name, argspec, string.join(tipList, "\n"))
     return calltip
 
 def ispython(object):
