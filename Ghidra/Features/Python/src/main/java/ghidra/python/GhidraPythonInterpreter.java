@@ -462,7 +462,7 @@ public class GhidraPythonInterpreter extends InteractiveInterpreter {
 		// to simplify completion procedure we strip off right part of the input after the word as it has no further use
 		// the rest will be dealt with later by the python's code
 		
-		System.out.println("String before: '%s'; Length: %d; CaretPos: %d".formatted(cmd, cmd.length(), caretPosition));
+//		System.out.println("String before: '%s'; Length: %d; CaretPos: %d".formatted(cmd, cmd.length(), caretPosition));
 		if (0 < caretPosition && caretPosition < cmd.length()) {
 			// find first whitespace char
 			
@@ -473,7 +473,7 @@ public class GhidraPythonInterpreter extends InteractiveInterpreter {
 			}
 			cmd = cmd.substring(0, i);
 		}
-		System.out.println("String after: '%s'".formatted(cmd));
+//		System.out.println("String after: '%s'".formatted(cmd));
 		
 		
 		return getPropertyCommandCompletions(cmd, includeBuiltins, caretPosition);
@@ -539,12 +539,12 @@ public class GhidraPythonInterpreter extends InteractiveInterpreter {
 	private List<CodeCompletion> getPropertyCommandCompletions(String cmd,
 			boolean includeBuiltins, int caretPosition) {
 		try {
-			
+		
 			PyObject getAutoCompleteList = introspectModule.__findattr__("getAutoCompleteList");
 			
 			
 			PyString command = new PyString(cmd);
-			
+		
 			PyStringMap locals = ((PyStringMap) getLocals()).copy();
 			if (includeBuiltins) {
 				// Add in the __builtin__ module's contents for the search
@@ -556,7 +556,7 @@ public class GhidraPythonInterpreter extends InteractiveInterpreter {
 			List<?> list = (List<?>) getAutoCompleteList.__call__(command, locals);
 			
 			Instant end = Instant.now();
-			System.out.println(Duration.between(start, end));
+			System.out.println("ComplGen took: %s; Len: %s".formatted(Duration.between(start, end), list.size()));
 
 			
 			return CollectionUtils.asList(list, CodeCompletion.class);

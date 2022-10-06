@@ -76,8 +76,8 @@ def getAutoCompleteList(command='', locals=None, includeMagic=1,
                 else:
                     pyObj = locals[attribute]
                 completion_list.append(PythonCodeCompletionFactory.
-                                       # newCodeCompletion(attribute, attribute,
-                                       newCodeCompletionWithHighlighting(attribute, pyObj, filter))
+                                        # newCodeCompletion(attribute, attribute[len(filter):], pyObj))
+                                        newCodeCompletionWithHighlighting(attribute, pyObj, filter))
             except:
                 # hmm, problem evaluating?  Examples of this include
                 # inner classes, e.g. access$0, which aren't valid Python

@@ -16,16 +16,30 @@
 package ghidra.python;
 
 import java.awt.Color;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Insets;
+import java.awt.Rectangle;
+import java.awt.RenderingHints;
+import java.awt.Toolkit;
+import java.awt.font.TextAttribute;
 import java.lang.reflect.Method;
+import java.text.AttributedString;
 import java.util.*;
 
+import javax.swing.Icon;
 import javax.swing.JComponent;
+import javax.swing.JLabel;
+import javax.swing.SwingUtilities;
 
 import org.python.core.PyInstance;
 import org.python.core.PyObject;
 
 import docking.widgets.label.GDLabel;
 import docking.widgets.label.GHtmlLabel;
+import docking.widgets.label.GLabel;
 import ghidra.app.plugin.core.console.CodeCompletion;
 import ghidra.framework.options.Options;
 import ghidra.util.Msg;
@@ -178,7 +192,7 @@ public class PythonCodeCompletionFactory {
 	}
 
 	/**
-	 * Creates a new CodeCompletion from the given Python objects.
+	 * Creates a new prefix only CodeCompletion from the given Python objects.
 	 * 
 	 * @param description description of the new CodeCompletion
 	 * @param insertion what will be inserted to make the code complete
@@ -187,39 +201,43 @@ public class PythonCodeCompletionFactory {
 	 */
 	public static CodeCompletion newCodeCompletion(String description, String insertion,
 			PyObject pyObj) {
-		JComponent comp = null;
+//		JComponent comp = null;
+		
+		int charsToRemove = description.length() - insertion.length();
+		String userInput = description.substring(0, charsToRemove);
+		return newCodeCompletionWithHighlighting(description, pyObj, userInput);
 
-		if (pyObj != null) {
-			if (includeTypes) {
-				/* append the class name to the end of the description */
-				String className = getSimpleName(pyObj.getClass());
-				if (pyObj instanceof PyInstance) {
-					/* get the real class */
-					className = getSimpleName(((PyInstance) pyObj).instclass.__name__);
-				}
-				else if (className.startsWith("Py")) {
-					/* strip off the "Py" */
-					className = className.substring("Py".length());
-				}
-				description = description + " (" + className + ")";
-			}
-
-			comp = new GDLabel(description);
-			Iterator<Class<?>> iter = classes.iterator();
-			while (iter.hasNext()) {
-				Class<?> testClass = iter.next();
-				if (testClass.isInstance(pyObj)) {
-					comp.setForeground(classToColorMap.get(testClass));
-					break;
-				}
-			}
-		}
-		return new CodeCompletion(description, insertion, comp);
+//		if (pyObj != null) {
+//			if (includeTypes) {
+//				/* append the class name to the end of the description */
+//				String className = getSimpleName(pyObj.getClass());
+//				if (pyObj instanceof PyInstance) {
+//					/* get the real class */
+//					className = getSimpleName(((PyInstance) pyObj).instclass.__name__);
+//				}
+//				else if (className.startsWith("Py")) {
+//					/* strip off the "Py" */
+//					className = className.substring("Py".length());
+//				}
+//				description = description + " (" + className + ")";
+//			}
+//
+//			comp = new GDLabel(description);
+//			Iterator<Class<?>> iter = classes.iterator();
+//			while (iter.hasNext()) {
+//				Class<?> testClass = iter.next();
+//				if (testClass.isInstance(pyObj)) {
+//					comp.setForeground(classToColorMap.get(testClass));
+//					break;
+//				}
+//			}
+//		}
+//		return new CodeCompletion(description, insertion, comp, charsToRemove);
 	}
 	
 	/**
 	 * Creates a new CodeCompletion from the given Python objects 
-	 * and adds highlighting to the code completion window for already entered part of the insertion string.  
+	 * and adds highlighting to the code completion window for the already entered part.  
 	 * 
 	 * @param insertion what will be inserted to make the code complete
 	 * @param pyObj a Python Object
@@ -248,18 +266,18 @@ public class PythonCodeCompletionFactory {
 
 			// highlight matched part of the insertion string with HTML
 			// this restriction is for performance purposes, as JLabels with html are too slow to create
-			if (charsToRemove >= 2) {
 				int highlightStart = description.toLowerCase().indexOf(userInput.toLowerCase());
 				int highlightEnd = highlightStart + userInput.length(); 
-				description = String.format("<html>%s<b>%s</b>%s ; %d; %d</html>", 
-						description.substring(0, highlightStart), 
-						description.substring(highlightStart, highlightEnd),
-						description.substring(highlightEnd), 
-						highlightStart, highlightEnd);
-			}  
+//				description = String.format("%s%s%s ; %d; %d",
+//				description = String.format("<html>%s<b>%s</b>%s ; %d; %d</html>",
+//						description.substring(0, highlightStart), 
+//						description.substring(highlightStart, highlightEnd),
+//						description.substring(highlightEnd), 
+//						highlightStart, highlightEnd);
 			
-//			comp = new GDHtmlLabel("%s;%s;%s".formatted(description, insertion, charsToRemove));
-			comp = new GHtmlLabel(description);
+//			comp = new GHtmlLabel(description);
+			comp = new CodeCompletionSuggestionLabel(description, highlightStart, highlightEnd);
+//			comp = new GLabel(description);
 			Iterator<Class<?>> iter = classes.iterator();
 			while (iter.hasNext()) {
 				Class<?> testClass = iter.next();
@@ -347,5 +365,62 @@ public class PythonCodeCompletionFactory {
 		}
 
 		return callMethodList.toArray();
+	}
+	
+		
+	private static class CodeCompletionSuggestionLabel extends GDLabel {
+		
+	    private Rectangle paintIconR = new Rectangle();
+	    private Rectangle paintTextR = new Rectangle();
+	    
+	    private int highlightStart;
+	    private int highlightEnd;
+
+		public CodeCompletionSuggestionLabel(String description, int highlightStart, int highlightEnd) {
+			super(description);
+			this.highlightStart = highlightStart;
+			this.highlightEnd = highlightEnd;
+		}
+
+	    private String layoutLabel(FontMetrics fm) {
+	    	Insets insets = this.getInsets(null);
+			String text = this.getText();
+			Icon icon = this.isEnabled() ? this.getIcon() : this.getDisabledIcon();
+			Rectangle paintViewR = new Rectangle(insets.left, insets.top,
+					getWidth() - (insets.left + insets.right), 
+					getHeight() - (insets.top + insets.bottom));
+			paintIconR.x = paintIconR.y = paintIconR.width = paintIconR.height = 0;
+			paintTextR.x = paintTextR.y = paintTextR.width = paintTextR.height = 0;
+			return SwingUtilities.layoutCompoundLabel((JComponent) this, fm,
+					text, icon, this.getVerticalAlignment(), this.getHorizontalAlignment(),
+					this.getVerticalTextPosition(), this.getHorizontalTextPosition(),
+					paintViewR, paintIconR, paintTextR, this.getIconTextGap());
+		}
+
+		@Override
+		protected void paintComponent(Graphics g) {
+			String lblText = getText();
+			setText("");
+			super.paintComponent(g);
+			setText(lblText);
+			
+			Graphics2D g2d = (Graphics2D) g.create();
+			
+            RenderingHints desktopHints = (RenderingHints) Toolkit.getDefaultToolkit().getDesktopProperty("awt.font.desktophints");
+        	if (desktopHints != null) {
+        	    g2d.setRenderingHints(desktopHints);
+        	}
+        	
+        	FontMetrics fm = g2d.getFontMetrics();
+        	Font boldFont = g2d.getFont().deriveFont(Font.BOLD);
+        	String clippedText = layoutLabel(fm);
+        	
+            AttributedString text = new AttributedString(clippedText);
+            if (highlightStart < highlightEnd)
+            	text.addAttribute(TextAttribute.FONT, boldFont, highlightStart, highlightEnd);
+	        
+			g2d.drawString(text.getIterator(), paintTextR.x, paintTextR.y + fm.getAscent());
+            g2d.dispose();			
+		}
 	}
 }
