@@ -70,9 +70,16 @@ public class PythonPlugin extends ProgramPlugin
 	// Plugin options
 	private final static String INCLUDE_BUILTINS_LABEL = "Include \"builtins\" in code completion?";
 	private final static String INCLUDE_BUILTINS_DESCRIPTION =
-		"Whether or not to include Python's built-in functions and properties in the pop-up code completion window.";
+			"Whether or not to include Python's built-in functions and properties in the pop-up code completion window.";
 	private final static boolean INCLUDE_BUILTINS_DEFAULT = true;
 	private boolean includeBuiltins = INCLUDE_BUILTINS_DEFAULT;
+
+	private final static String INCLUDE_ONLY_PREFIX_COMPLETIONS_LABEL = "Include only prefix completions?";
+	private final static String INCLUDE_ONLY_PREFIX_COMPLETIONS_DESCRIPTION =
+			"Whether or not to only include functions that start with the entered word.\n" +
+			"i.e. if you enter a word \"add\", then \"addEntryPoint\" will be included and \"currentAddress\" won't.";
+	private final static boolean INCLUDE_ONLY_PREFIX_COMPLETIONS_DEFAULT = false;
+	private boolean includeOnlyPrefixCompletions = INCLUDE_BUILTINS_DEFAULT;
 
 	/**
 	 * Creates a new PythonPlugin object.
@@ -194,7 +201,14 @@ public class PythonPlugin extends ProgramPlugin
 			ToolOptions options = tool.getOptions("Python");
 			includeBuiltins = options.getBoolean(INCLUDE_BUILTINS_LABEL, INCLUDE_BUILTINS_DEFAULT);
 			options.registerOption(INCLUDE_BUILTINS_LABEL, INCLUDE_BUILTINS_DEFAULT, null,
-				INCLUDE_BUILTINS_DESCRIPTION);
+					INCLUDE_BUILTINS_DESCRIPTION);
+			includeOnlyPrefixCompletions = options.getBoolean(
+					INCLUDE_ONLY_PREFIX_COMPLETIONS_LABEL,
+					INCLUDE_ONLY_PREFIX_COMPLETIONS_DEFAULT);
+			options.registerOption(INCLUDE_ONLY_PREFIX_COMPLETIONS_LABEL, 
+					INCLUDE_ONLY_PREFIX_COMPLETIONS_DEFAULT, null,
+					INCLUDE_ONLY_PREFIX_COMPLETIONS_DESCRIPTION);
+			
 			options.addOptionsChangeListener(this);
 
 			interpreter = GhidraPythonInterpreter.get();
@@ -253,6 +267,9 @@ public class PythonPlugin extends ProgramPlugin
 		else if (optionName.equals(INCLUDE_BUILTINS_LABEL)) {
 			includeBuiltins = ((Boolean) newValue).booleanValue();
 		}
+		else if (optionName.equals(INCLUDE_ONLY_PREFIX_COMPLETIONS_LABEL)) {
+			includeOnlyPrefixCompletions = ((Boolean) newValue).booleanValue();
+		}
 	}
 
 	/**
@@ -275,7 +292,7 @@ public class PythonPlugin extends ProgramPlugin
 				currentSelection, currentHighlight),
 			interactiveTaskMonitor, console.getOutWriter());
 
-		return interpreter.getCommandCompletions(cmd, includeBuiltins, caretOffset);
+		return interpreter.getCommandCompletions(cmd, includeBuiltins, caretOffset, includeOnlyPrefixCompletions);
 	}
 
 	@Override

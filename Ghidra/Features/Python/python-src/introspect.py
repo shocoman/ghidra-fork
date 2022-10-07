@@ -28,7 +28,7 @@ except NameError:
 #from java.lang.System.out import println
     
 def getAutoCompleteList(command='', locals=None, includeMagic=1,
-                        includeSingle=1, includeDouble=1):
+                        includeSingle=1, includeDouble=1, includeOnlyPrefixCompetions=True):
     """Return list of auto-completion tuples for command.
     
     First entry is the possible completions, and second entry is the
@@ -68,21 +68,32 @@ def getAutoCompleteList(command='', locals=None, includeMagic=1,
                                            includeSingle, includeDouble)
     completion_list = []
     for attribute in attributes:
-        # if attribute.lower().startswith(filter.lower()):
-        if filter.lower() in attribute.lower():
+        
+        to_include = filter.lower() in attribute.lower()
+        if includeOnlyPrefixCompetions:
+            to_include = attribute.lower().startswith(filter.lower())
+        
+        if to_include:
             try:
                 if object is not None:
                     pyObj = getattr(object, attribute)
                 else:
                     pyObj = locals[attribute]
-                completion_list.append(PythonCodeCompletionFactory.
-                                        # newCodeCompletion(attribute, attribute[len(filter):], pyObj))
-                                        newCodeCompletionWithHighlighting(attribute, pyObj, filter))
+                
+                if includeOnlyPrefixCompetions:
+                    completion = PythonCodeCompletionFactory.newCodeCompletion(
+                        attribute, attribute[len(filter):], pyObj)
+                else:
+                    completion = PythonCodeCompletionFactory.newCodeCompletionWithHighlighting(
+                        attribute, pyObj, filter)
+                completion_list.append(completion)
             except:
                 # hmm, problem evaluating?  Examples of this include
                 # inner classes, e.g. access$0, which aren't valid Python
                 # anyway
                 pass
+            
+    print("Include only prefix completion: ", includeOnlyPrefixCompetions)
             
     completion_list.sort(get_lexicographical_string_comparator_where_prefix_goes_first(filter))
     # completion_list.sort(compare_completions)

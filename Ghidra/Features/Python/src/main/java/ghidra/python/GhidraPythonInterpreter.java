@@ -449,7 +449,8 @@ public class GhidraPythonInterpreter extends InteractiveInterpreter {
 	 * @return A list of possible command completions.  Could be empty if there aren't any.
 	 * @see PythonPlugin#getCompletions
 	 */
-	List<CodeCompletion> getCommandCompletions(String cmd, boolean includeBuiltins, int caretPosition) {	
+	List<CodeCompletion> getCommandCompletions(String cmd, boolean includeBuiltins, int caretPosition,
+			boolean includeOnlyPrefixCompletions) {	
 //		if ((cmd.length() > 0) && (cmd.charAt(cmd.length() - 1) == '(')) {
 //			return getMethodCommandCompletions(cmd);
 //		}
@@ -476,7 +477,7 @@ public class GhidraPythonInterpreter extends InteractiveInterpreter {
 //		System.out.println("String after: '%s'".formatted(cmd));
 		
 		
-		return getPropertyCommandCompletions(cmd, includeBuiltins, caretPosition);
+		return getPropertyCommandCompletions(cmd, includeBuiltins, caretPosition, includeOnlyPrefixCompletions);
 	}
 
 	/**
@@ -537,7 +538,7 @@ public class GhidraPythonInterpreter extends InteractiveInterpreter {
 	 * @return A list of possible command completions.  Could be empty if there aren't any.
 	 */
 	private List<CodeCompletion> getPropertyCommandCompletions(String cmd,
-			boolean includeBuiltins, int caretPosition) {
+			boolean includeBuiltins, int caretPosition, boolean includeOnlyPrefixCompletions) {
 		try {
 		
 			PyObject getAutoCompleteList = introspectModule.__findattr__("getAutoCompleteList");
@@ -553,7 +554,13 @@ public class GhidraPythonInterpreter extends InteractiveInterpreter {
 			
 			Instant start = Instant.now();
 			
-			List<?> list = (List<?>) getAutoCompleteList.__call__(command, locals);
+//			List<?> list = (List<?>) getAutoCompleteList.__call__(command, locals);
+			
+			PyObject includeOnlyPrefixCompetionsPy = new PyBoolean(includeOnlyPrefixCompletions);
+			PyObject[] args = {command, locals, includeOnlyPrefixCompetionsPy};
+			String[] keywordArgNames = {"includeOnlyPrefixCompetions"};
+			List<?> list = (List<?>) getAutoCompleteList.__call__(args, keywordArgNames);
+			
 			
 			Instant end = Instant.now();
 			System.out.println("ComplGen took: %s; Len: %s".formatted(Duration.between(start, end), list.size()));
