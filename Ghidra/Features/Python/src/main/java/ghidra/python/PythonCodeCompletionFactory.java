@@ -194,18 +194,23 @@ public class PythonCodeCompletionFactory {
 	/**
 	 * Creates a new prefix only CodeCompletion from the given Python objects.
 	 * 
+	 * 
+	 * 
 	 * @param description description of the new CodeCompletion
 	 * @param insertion what will be inserted to make the code complete
 	 * @param pyObj a Python Object
 	 * @return A new CodeCompletion from the given Python objects.
+	 * @deprecated use {@link #newCodeCompletion(String, String, PyObject, String)}
 	 */
+	@Deprecated
 	public static CodeCompletion newCodeCompletion(String description, String insertion,
 			PyObject pyObj) {
 //		JComponent comp = null;
 		
 		int charsToRemove = description.length() - insertion.length();
 		String userInput = description.substring(0, charsToRemove);
-		return newCodeCompletionWithHighlighting(description, pyObj, userInput);
+//		return newCodeCompletion(description, description, pyObj, userInput);
+		return newCodeCompletion(description, insertion, pyObj, "");
 
 //		if (pyObj != null) {
 //			if (includeTypes) {
@@ -236,18 +241,21 @@ public class PythonCodeCompletionFactory {
 	}
 	
 	/**
-	 * Creates a new CodeCompletion from the given Python objects 
-	 * and adds highlighting to the code completion window for the already entered part.  
+	 * Creates a new CodeCompletion from the given Python objects.
 	 * 
+	 * @param description description of the new CodeCompletion
 	 * @param insertion what will be inserted to make the code complete
 	 * @param pyObj a Python Object
-	 * @param userInput a word that we want to autocomplete
+	 * @param userInput a word that we want to autocomplete; can be used to determine 
+	 * the number of characters to remove and possibly what text to highlight in the code completion popup 
 	 * @return A new CodeCompletion from the given Python objects.
 	 */
-	public static CodeCompletion newCodeCompletionWithHighlighting(String insertion, PyObject pyObj, String userInput) {
+	public static CodeCompletion newCodeCompletion(String description, String insertion,
+			PyObject pyObj, String userInput) {
 		JComponent comp = null;
-		String description = insertion;
 		int charsToRemove = userInput.length();
+		
+		System.out.println("UserInput: %s".formatted(userInput));
 
 		if (pyObj != null) {
 			if (includeTypes) {
@@ -266,8 +274,9 @@ public class PythonCodeCompletionFactory {
 
 			// highlight matched part of the insertion string with HTML
 			// this restriction is for performance purposes, as JLabels with html are too slow to create
-				int highlightStart = description.toLowerCase().indexOf(userInput.toLowerCase());
-				int highlightEnd = highlightStart + userInput.length(); 
+			int highlightStart = description.toLowerCase().indexOf(userInput.toLowerCase());
+			if (highlightStart < 0) highlightStart = 0;
+			int highlightEnd = highlightStart + userInput.length(); 
 //				description = String.format("%s%s%s ; %d; %d",
 //				description = String.format("<html>%s<b>%s</b>%s ; %d; %d</html>",
 //						description.substring(0, highlightStart), 
@@ -416,6 +425,7 @@ public class PythonCodeCompletionFactory {
         	String clippedText = layoutLabel(fm);
         	
             AttributedString text = new AttributedString(clippedText);
+            System.out.println("%s < %s' %s".formatted(highlightStart, highlightEnd, lblText));
             if (highlightStart < highlightEnd)
             	text.addAttribute(TextAttribute.FONT, boldFont, highlightStart, highlightEnd);
 	        

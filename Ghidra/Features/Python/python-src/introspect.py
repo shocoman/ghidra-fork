@@ -84,8 +84,8 @@ def getAutoCompleteList(command='', locals=None, includeMagic=1,
                     completion = PythonCodeCompletionFactory.newCodeCompletion(
                         attribute, attribute[len(filter):], pyObj)
                 else:
-                    completion = PythonCodeCompletionFactory.newCodeCompletionWithHighlighting(
-                        attribute, pyObj, filter)
+                    completion = PythonCodeCompletionFactory.newCodeCompletion(
+                        attribute, attribute, pyObj, filter)
                 completion_list.append(completion)
             except:
                 # hmm, problem evaluating?  Examples of this include

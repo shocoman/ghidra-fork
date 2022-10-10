@@ -27,7 +27,7 @@ import javax.swing.JComponent;
  * - a description of the completion (what are you completing?)
  * - the actual String that will be inserted
  * - an optional Component that will be in the completion List
- * 
+ * - the number of characters to remove before the insertion of the completion
  * 
  *
  */
@@ -63,9 +63,10 @@ public class CodeCompletion implements Comparable<CodeCompletion> {
 		this.component = comp;
 		this.charsToRemove = 0;
 	}
-	
+
+
 	/**
-	 * Construct a new CodeCompletion that can also remove text before the caret.
+	 * Construct a new CodeCompletion.
 	 * 
 	 * @param description description of this completion
 	 * @param insertion what will be inserted (or null)
@@ -113,7 +114,8 @@ public class CodeCompletion implements Comparable<CodeCompletion> {
 	}
 	
 	/**
-	 * Returns the number of characters to remove before the insertion of the code completion
+	 * Returns the number of characters to remove from the input before the insertion
+	 * of the code completion
 	 * 
 	 * @return the number of characters to remove
 	 */

@@ -81,7 +81,7 @@ public class InterpreterPanel extends JPanel implements OptionsChangeListener {
 	private PluginTool tool;
 	
 	// to correctly insert an autocompletion, we have to know the position of the caret 
-	// when the completion window was last triggered, because the user could move it away since then
+	// when the completion window was last triggered, because the user could move it away since
 	private int caretPosOnLastCompletionListUpdate;
 
 	private static Font getBasicFont() {
@@ -378,6 +378,7 @@ public class InterpreterPanel extends JPanel implements OptionsChangeListener {
 		setFocusTraversalPolicyProvider(true);
 	}
 
+	
 	private void completionWindowTriggered(CodeCompletionWindow completionWindow) {
 		if (completionWindow.isVisible()) {
 			CodeCompletion completion = completionWindow.getCompletion();

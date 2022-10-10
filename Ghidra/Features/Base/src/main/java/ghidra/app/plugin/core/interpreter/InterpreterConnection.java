@@ -48,5 +48,7 @@ public interface InterpreterConnection {
 	 */
 	@Deprecated
 	public List<CodeCompletion> getCompletions(String cmd);
-	public List<CodeCompletion> getCompletions(String cmd, int caretPosition);
+	default public List<CodeCompletion> getCompletions(String cmd, int caretPosition) {
+		return getCompletions(cmd.substring(0, caretPosition));
+	}
 }
