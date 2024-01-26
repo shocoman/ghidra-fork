@@ -26,12 +26,21 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javax.swing.*;
 import javax.swing.text.*;
 
+import docking.ActionContext;
 import docking.DockingUtils;
+import docking.action.DockingAction;
+import docking.action.KeyBindingData;
+import docking.action.MenuData;
+import docking.action.builder.ActionBuilder;
 import docking.actions.KeyBindingUtils;
+import docking.tool.ToolConstants;
 import generic.theme.GColor;
 import generic.theme.Gui;
 import generic.util.WindowUtilities;
+import ghidra.app.plugin.core.codebrowser.CodeViewerActionContext;
+import ghidra.app.plugin.core.codebrowser.CodeViewerProvider;
 import ghidra.app.plugin.core.console.CodeCompletion;
+import ghidra.app.util.HelpTopics;
 import ghidra.framework.options.OptionsChangeListener;
 import ghidra.framework.options.ToolOptions;
 import ghidra.framework.plugintool.PluginTool;
@@ -117,6 +126,25 @@ public class InterpreterPanel extends JPanel implements OptionsChangeListener {
 		build();
 
 		createOptions();
+	}
+	
+	void createActions(InterpreterComponentProvider provider) {
+		new ActionBuilder("Select All", getName())
+			.popupMenuGroup("Select", "1")
+			.popupMenuPath("&Select All")
+			.enabledWhen(c -> outputTextPane.getMousePosition() != null)
+			.onAction(c -> outputTextPane.selectAll())
+			.buildAndInstallLocal(provider);
+		
+		new ActionBuilder("Copy", getName())
+			.popupMenuGroup("Select", "2")
+			.popupMenuPath("&Copy")
+			.enabledWhen(c -> outputTextPane.getMousePosition() != null)
+			.onAction(c -> outputTextPane.copy())
+			.buildAndInstallLocal(provider);
+		
+		outputTextPane.getCaret().setVisible(true);
+		tool.addLocalAction(provider, new FindAction());
 	}
 
 	private void build() {
@@ -581,7 +609,7 @@ public class InterpreterPanel extends JPanel implements OptionsChangeListener {
 	public String getOutputText() {
 		return outputTextPane.getText();
 	}
-
+	
 	public InputStream getStdin() {
 		return stdin;
 	}
@@ -776,6 +804,36 @@ public class InterpreterPanel extends JPanel implements OptionsChangeListener {
 			isClosed.set(false);
 			queuedBytes.clear();
 			queuedBytes.offer(EMPTY_BYTES);
+		}
+	}
+	
+	class FindAction extends DockingAction {
+		PrimitiveFindTextDialog primitiveFindTextDialog;
+
+		public FindAction() {
+			super("Find", tool.getName());
+			setPopupMenuData(new MenuData(new String[] { "&Find..." }));
+			setKeyBindingData(new KeyBindingData(KeyEvent.VK_F, InputEvent.CTRL_DOWN_MASK));
+			setEnabled(true);
+
+			primitiveFindTextDialog = new PrimitiveFindTextDialog(outputTextPane, "Interpreter Find Text");
+		}
+
+		@Override
+		public void dispose() {
+			primitiveFindTextDialog.dispose();
+			super.dispose();
+		}
+
+		@Override
+		public void actionPerformed(ActionContext context) {
+			primitiveFindTextDialog.showDialog();
+		}
+		
+		@Override
+		public boolean isEnabledForContext(ActionContext context) {
+//			return outputTextPane.isFocusOwner();
+			return outputTextPane.getMousePosition() != null;
 		}
 	}
 }

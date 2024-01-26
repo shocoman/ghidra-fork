@@ -17,24 +17,42 @@ package ghidra.app.plugin.core.script;
 
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.Window;
+import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.io.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.swing.*;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.DefaultHighlighter;
 import javax.swing.text.Document;
+import javax.swing.text.Highlighter;
+import javax.swing.text.JTextComponent;
 import javax.swing.undo.UndoableEdit;
+
+import org.apache.commons.lang3.StringUtils;
 
 import docking.*;
 import docking.action.*;
 import docking.actions.KeyBindingUtils;
 import docking.options.editor.FontEditor;
+import docking.widgets.CursorPosition;
+import docking.widgets.FindDialog;
+import docking.widgets.FindDialogSearcher;
 import docking.widgets.OptionDialog;
+import docking.widgets.SearchLocation;
 import generic.jar.ResourceFile;
 import generic.theme.*;
 import generic.theme.GThemeDefaults.Colors;
 import generic.theme.GThemeDefaults.Colors.Messages;
+import generic.util.WindowUtilities;
+import ghidra.app.plugin.core.console.ConsoleComponentProvider;
+import ghidra.app.plugin.core.interpreter.PrimitiveFindTextDialog;
 import ghidra.app.script.GhidraScriptUtil;
+import ghidra.framework.main.ConsoleTextPane;
 import ghidra.util.*;
 import ghidra.util.datastruct.FixedSizeStack;
 import resources.Icons;
@@ -340,6 +358,10 @@ public class GhidraScriptEditorComponentProvider extends ComponentProvider {
 		fontAction.setDescription("Select Font");
 		fontAction.setEnabled(true);
 		plugin.getTool().addLocalAction(this, fontAction);
+		
+		
+		var findAction = new FindAction();
+		addLocalAction(findAction);
 
 //****************************************************************/
 		// DO NOT REMOVE THIS CODE!!
@@ -703,4 +725,30 @@ public class GhidraScriptEditorComponentProvider extends ComponentProvider {
 			return false;
 		}
 	}
+		
+	
+	class FindAction extends DockingAction {
+		PrimitiveFindTextDialog primitiveFindTextDialog;
+
+		public FindAction() {
+			super("Find", GhidraScriptEditorComponentProvider.this.getName());
+			setPopupMenuData(new MenuData(new String[] { "&Find..." }));
+			setKeyBindingData(new KeyBindingData(KeyEvent.VK_F, InputEvent.CTRL_DOWN_MASK));
+			setEnabled(true);
+
+			primitiveFindTextDialog = new PrimitiveFindTextDialog(textArea, "Script Editor Find Text");
+		}
+
+		@Override
+		public void dispose() {
+			primitiveFindTextDialog.dispose();
+			super.dispose();
+		}
+
+		@Override
+		public void actionPerformed(ActionContext context) {
+			primitiveFindTextDialog.showDialog();
+		}
+	}
+	
 }

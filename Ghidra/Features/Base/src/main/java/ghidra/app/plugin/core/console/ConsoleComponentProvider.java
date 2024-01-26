@@ -18,15 +18,27 @@ package ghidra.app.plugin.core.console;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.PrintWriter;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.swing.*;
 import javax.swing.text.BadLocationException;
+import javax.swing.text.DefaultHighlighter;
 import javax.swing.text.Document;
+import javax.swing.text.Highlighter;
+
+import org.apache.commons.lang3.StringUtils;
 
 import docking.*;
 import docking.action.*;
+import docking.widgets.CursorPosition;
+import docking.widgets.FindDialog;
+import docking.widgets.FindDialogSearcher;
+import docking.widgets.SearchLocation;
 import generic.theme.GIcon;
 import generic.theme.Gui;
+import generic.util.WindowUtilities;
+import ghidra.app.plugin.core.interpreter.PrimitiveFindTextDialog;
 import ghidra.app.services.*;
 import ghidra.framework.main.ConsoleTextPane;
 import ghidra.framework.options.ToolOptions;
@@ -286,6 +298,7 @@ public class ConsoleComponentProvider extends ComponentProviderAdapter
 
 		addLocalAction(scrollAction);
 		addLocalAction(clearAction);
+		addLocalAction(new FindAction());
 	}
 
 	@Override
@@ -417,5 +430,31 @@ public class ConsoleComponentProvider extends ComponentProviderAdapter
 	public void setCurrentAddress(Address address) {
 		currentAddress = address;
 	}
+	
+	
+	 
+	class FindAction extends DockingAction {
+		PrimitiveFindTextDialog primitiveFindTextDialog;
 
+		public FindAction() {
+			super("Find", ConsoleComponentProvider.this.getName());
+			setPopupMenuData(new MenuData(new String[] { "&Find..." }));
+			setKeyBindingData(new KeyBindingData(KeyEvent.VK_F, InputEvent.CTRL_DOWN_MASK));
+			setEnabled(true);
+
+			primitiveFindTextDialog = new PrimitiveFindTextDialog(textPane, "Console Find Text");
+		}
+
+		@Override
+		public void dispose() {
+			primitiveFindTextDialog.dispose();
+			super.dispose();
+		}
+
+		@Override
+		public void actionPerformed(ActionContext context) {
+			primitiveFindTextDialog.showDialog();
+		}
+	}
+	
 }

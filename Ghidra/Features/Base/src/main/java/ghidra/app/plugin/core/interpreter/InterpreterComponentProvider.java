@@ -15,32 +15,74 @@
  */
 package ghidra.app.plugin.core.interpreter;
 
+import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.Shape;
+import java.awt.Window;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
+import java.awt.geom.Rectangle2D;
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
+import javax.help.SearchHit;
+import javax.help.TextHelpModel;
+import javax.help.DefaultHelpModel.DefaultHighlight;
 import javax.swing.Icon;
 import javax.swing.JComponent;
+import javax.swing.JTextPane;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.DefaultHighlighter;
+import javax.swing.text.Document;
+import javax.swing.text.Highlighter;
+import javax.swing.text.Highlighter.Highlight;
+import javax.swing.text.Highlighter.HighlightPainter;
+
+import org.apache.commons.lang3.StringUtils;
+
+import javax.swing.text.JTextComponent;
 
 import docking.ActionContext;
+import docking.DockingWindowManager;
 import docking.action.DockingAction;
+import docking.action.KeyBindingData;
+import docking.action.MenuData;
 import docking.action.ToolBarData;
+import docking.widgets.CursorPosition;
+import docking.widgets.FindDialog;
+import docking.widgets.FindDialogSearcher;
 import docking.widgets.OptionDialog;
+import docking.widgets.SearchLocation;
+import docking.widgets.fieldpanel.field.Field;
+import docking.widgets.fieldpanel.support.FieldLocation;
+import generic.theme.GColor;
 import generic.theme.GIcon;
+import generic.util.WindowUtilities;
+import ghidra.app.util.HelpTopics;
 import ghidra.framework.plugintool.ComponentProviderAdapter;
 import ghidra.util.HelpLocation;
+import ghidra.util.Msg;
+import ghidra.util.task.Task;
+import ghidra.util.task.TaskLauncher;
+import ghidra.util.task.TaskMonitor;
 import resources.Icons;
 import utility.function.Callback;
 
-public class InterpreterComponentProvider extends ComponentProviderAdapter
-		implements InterpreterConsole {
+public class InterpreterComponentProvider extends ComponentProviderAdapter implements InterpreterConsole {
 
 	private InterpreterPanel panel;
 	private InterpreterConnection interpreter;
 	private List<Callback> firstActivationCallbacks;
 
-	public InterpreterComponentProvider(InterpreterPanelPlugin plugin,
-			InterpreterConnection interpreter, boolean visible) {
+	public InterpreterComponentProvider(InterpreterPanelPlugin plugin, InterpreterConnection interpreter,
+			boolean visible) {
 		super(plugin.getTool(), interpreter.getTitle(), plugin.getName());
 
 		this.panel = new InterpreterPanel(plugin.getTool(), interpreter);
@@ -74,6 +116,8 @@ public class InterpreterComponentProvider extends ComponentProviderAdapter
 		clearAction.setEnabled(true);
 
 		addLocalAction(clearAction);
+		
+		panel.createActions(this);
 	}
 
 	@Override
@@ -90,7 +134,7 @@ public class InterpreterComponentProvider extends ComponentProviderAdapter
 			@Override
 			public void actionPerformed(ActionContext context) {
 				int choice = OptionDialog.showYesNoDialog(panel, "Remove Interpreter?",
-					"Are you sure you want to permanently close the interpreter?");
+						"Are you sure you want to permanently close the interpreter?");
 				if (choice == OptionDialog.NO_OPTION) {
 					return;
 				}
@@ -156,7 +200,8 @@ public class InterpreterComponentProvider extends ComponentProviderAdapter
 	}
 
 	/**
-	 * For testing purposes, but should probably be promoted to InterpreterConsole interface
+	 * For testing purposes, but should probably be promoted to InterpreterConsole
+	 * interface
 	 * 
 	 * @return the prompt;
 	 */
@@ -178,8 +223,10 @@ public class InterpreterComponentProvider extends ComponentProviderAdapter
 	@Override
 	public void componentActivated() {
 
-		// Since we only care about the first activation, clear the list of callbacks so future 
-		// activations don't trigger anything.  First save them off to a local list so when we
+		// Since we only care about the first activation, clear the list of callbacks so
+		// future
+		// activations don't trigger anything. First save them off to a local list so
+		// when we
 		// process them we aren't affected by concurrent modification due to reentrance.
 		List<Callback> callbacks = new ArrayList<>(firstActivationCallbacks);
 		firstActivationCallbacks.clear();
@@ -220,5 +267,5 @@ public class InterpreterComponentProvider extends ComponentProviderAdapter
 	 */
 	public String getOutputText() {
 		return panel.getOutputText();
-	}
+	}	
 }

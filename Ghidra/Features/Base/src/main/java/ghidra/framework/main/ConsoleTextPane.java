@@ -16,13 +16,30 @@
 package ghidra.framework.main;
 
 import java.awt.Font;
+import java.awt.Window;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
 import java.util.LinkedList;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.swing.JTextPane;
 import javax.swing.text.*;
 
+import org.apache.commons.lang3.StringUtils;
+
+import docking.ActionContext;
+import docking.DockingWindowManager;
+import docking.action.DockingAction;
+import docking.action.KeyBindingData;
+import docking.action.MenuData;
+import docking.widgets.CursorPosition;
+import docking.widgets.FindDialog;
+import docking.widgets.FindDialogSearcher;
+import docking.widgets.SearchLocation;
 import generic.theme.GColor;
 import generic.theme.GThemeDefaults.Ids.Fonts;
+import generic.util.WindowUtilities;
 import generic.theme.Gui;
 import ghidra.framework.options.*;
 import ghidra.framework.plugintool.PluginTool;
@@ -330,5 +347,4 @@ public class ConsoleTextPane extends JTextPane implements OptionsChangeListener 
 			return errorAttributeSet;
 		}
 	}
-
 }
